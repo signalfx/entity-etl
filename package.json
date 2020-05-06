@@ -1,0 +1,11 @@
+{
+  "name": "entity-etl",
+  "version": "0.0.1",
+  "description": "Sample script used to fetch entities from SignalFx service, transform them and post to a REST endpoint.",
+  "main": "app.js",
+  "dependencies": {
+    "handlebars": "4.7.6",
+    "loglevel": "1.6.8",
+    "node-fetch": "2.6.0"
+  }
+}
