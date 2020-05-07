@@ -3,31 +3,45 @@
  */
 
 const fs = require('fs');
+const path = require('path');
 const log = require('loglevel');
 
-const CHECKPOINTS_FILE = 'checkpoints.json';
-const CHECKPOINTS_FILE_ENCODING = 'utf8';
-const UPDATED_ON_MS_PROP_NAME = 'sf_updatedOnMs';
+const CHECKPOINTS_DIR = 'data/checkpoints';
+const CHECKPOINT_FILE_EXT = '.dat';
+const CHECKPOINT_FILE_ENCODING = 'utf8';
+const UPDATED_ON_MS_PROP_NAME = 'updatedOnMs';
 
-function getCheckpoints() {
+function getCheckpoint(entityType) {
+  const checkpointFilePath = getCheckpointFilePath(entityType);
   try {
-    const data = fs.readFileSync(CHECKPOINTS_FILE, CHECKPOINTS_FILE_ENCODING);
-    return JSON.parse(data);
+    const data = fs.readFileSync(checkpointFilePath, CHECKPOINT_FILE_ENCODING);
+    return Number.parseInt(data, 10);
   } catch (e) {
-    log.warn(`Failed to read ${CHECKPOINTS_FILE} file.`, e.message);
-    return {};
+    log.warn(`Failed to read checkpoint file (it's OK during the first run): ${checkpointFilePath}`, e.message);
+    return undefined;
   }
 }
 
-function updateCheckpoints(type, checkpoints, entities) {
+function updateCheckpoint(entityType, entities) {
   if (!Array.isArray(entities) || (entities.length === 0)) {
-    log.debug(`Cannot update checkpoint for "${type}" type as no entities were found.`);
+    log.debug(`Cannot update checkpoint for ${type} type as no entities were found.`);
     return;
   }
-  checkpoints[type] = entities
+
+  const checkpoint = entities
     .map(item => item[UPDATED_ON_MS_PROP_NAME])
     .sort((a, b) => b - a)[0];
-  fs.writeFileSync(CHECKPOINTS_FILE, JSON.stringify(checkpoints, null, 2), CHECKPOINTS_FILE_ENCODING);
+  if (!Number.isInteger(checkpoint)) {
+    log.warn(`Cannot update checkpoint for ${type} type - ${UPDATED_ON_MS_PROP_NAME} field is missing or invalid.`);
+    return;
+  }
+
+  const checkpointFilePath = getCheckpointFilePath(entityType);
+  fs.writeFileSync(checkpointFilePath, checkpoint, CHECKPOINT_FILE_ENCODING);
 }
 
-module.exports = {getCheckpoints, updateCheckpoints};
+function getCheckpointFilePath(entityType) {
+  return path.join(CHECKPOINTS_DIR, entityType + CHECKPOINT_FILE_EXT);
+}
+
+module.exports = {getCheckpoint, updateCheckpoint};
