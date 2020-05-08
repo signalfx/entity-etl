@@ -1,0 +1,21 @@
+{
+  "logLevel": "debug",
+  "sfx": {
+    "server": "http://localhost:8080/",
+    "headers": {
+      "X-SF-TOKEN": "{{env.SIGNALFX_AUTH_TOKEN}}"
+    },
+    "entitiesTypesEndpoint": "/v2/entities/types",
+    "entitiesEndpoint": "/v2/entities?type={{type}}&updatedFromMs={{updatedFromMs}}",
+    "checkpointOverlapInSeconds": 600
+  },
+  "output": {
+    "method": "PUT",
+    "server": "http://localhost:9090/",
+    "headers": {
+      "Authentication": "Bearer {{env.MY_SECRET_TOKEN}}",
+      "Content-Type": "application/json"
+    },
+    "entitiesEndpoint": "/sample/{{type}}?jwt={{env.JWT_TOKEN}}"
+  }
+}

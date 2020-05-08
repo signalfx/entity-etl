@@ -1,0 +1,14 @@
+{
+  "cmdb_ci": "{{entity.aws_arn}}",
+  "asset": "{{entity.AWSUniqueId}}",
+  "cpu_type": "{{entity.aws_architecture}}",
+  "hardware_status": "{{entity.aws_state}}",
+  "hardware_substatus": "{{entity.aws_state_reason}}",
+  "install_date": "{{entity.aws_launch_time}}",
+  "name": "{{#with entity.aws_tag_Name}}{{.}}{{else}}{{entity.aws_instance_id}}{{/with}}",
+  "operational_status": "{{entity.aws_state}}",
+  "subcategory": "{{entity.aws_instance_type}}",
+  "type": "VM",
+  "version": "{{entity.aws_image_id}}",
+  "virtual": "{{entity.aws_hypervisor}}"
+}
