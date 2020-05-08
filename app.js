@@ -5,28 +5,36 @@
 const log = require('loglevel');
 
 const {sendHttpRequest} = require('./http');
-const {getCheckpoint, updateCheckpoint} = require('./checkpoints');
+const {loadCheckpoint, saveCheckpoint} = require('./checkpoints');
+const {loadSnapshot, saveSnapshot, isNewOrUpdatedEntity} = require('./snapshots');
 const {loadTemplates, renderTemplate, COMBINED_OUTPUT_TEMPLATE} = require('./templates');
 
 const config = require('./config.json');
 
-log.setLevel(config.logLevel);
-
 async function main() {
+  log.setLevel(config.logLevel);
   try {
     const templates = loadTemplates();
     const entityTypes = await getEntityTypes();
 
-    for (const et of entityTypes) {
-      const typeName = et.name;
+    for (const entityType of entityTypes) {
+      const typeName = entityType.name;
       if (!templates.has(typeName)) {
-        log.warn(`No transform file for "${typeName}" entities. All skipped.`);
+        log.warn(`No template file for ${typeName} entities. All skipped.`);
         continue;
       }
-      const entities = await fetchEntities(typeName);
-      const transformedEntities = transform(entities, templates.get(typeName));
+      const checkpoint = loadCheckpoint(typeName);
+      const snapshot = loadSnapshot(typeName, entityType.uniqueIdField);
+
+      const entities = await fetchEntities(typeName, checkpoint);
+      const newOrUpdatedEntities = entities.filter(e => isNewOrUpdatedEntity(snapshot, e));
+      log.debug(`Fetched ${entities.length} ${typeName} entities of which ${newOrUpdatedEntities.length} is new or updated.`);
+
+      const transformedEntities = transform(newOrUpdatedEntities, templates.get(typeName));
       await send(transformedEntities, typeName, templates.get(COMBINED_OUTPUT_TEMPLATE));
-      updateCheckpoint(typeName, entities);
+
+      saveSnapshot(snapshot, typeName, newOrUpdatedEntities);
+      saveCheckpoint(typeName, entities);
     }
   } catch (e) {
     log.error('Fatal error.', e);
@@ -45,16 +53,12 @@ async function fetchEntityTypes() {
   return res.json();
 }
 
-async function fetchEntities(type) {
-  const checkpoint = getCheckpoint(type);
+async function fetchEntities(type, checkpoint) {
   const updatedFromMs = Number.isInteger(checkpoint) ? checkpoint - config.sfx.checkpointOverlapInSeconds * 1000 : 1;
   const pathAndQuery = renderTemplate(config.sfx.entitiesEndpoint, {type, updatedFromMs});
 
   const res = await sendHttpRequest({server: config.sfx.server, path: pathAndQuery, headers: config.sfx.headers});
-  const entities = await res.json();
-
-  log.debug(`Fetched ${entities.length} "${type}" entities.`);
-  return entities;
+  return res.json();
 }
 
 function transform(entities, templateFn) {
@@ -62,13 +66,16 @@ function transform(entities, templateFn) {
 }
 
 async function send(transformedEntities, type, combinedOutputTemplateFn) {
+  if (transformedEntities.length === 0) {
+    return;
+  }
   const pathAndQuery = renderTemplate(config.output.entitiesEndpoint, {type});
   const {method, headers} = config.output;
   const res = await sendHttpRequest({
     method,
     server: config.output.server,
     path: pathAndQuery,
-    body: combinedOutputTemplateFn({entities: transformedEntities.slice(0, 23)}),
+    body: combinedOutputTemplateFn({entities: transformedEntities}),
     headers
   });
   log.debug(`Transformed entities sent successfully (${res.status} ${res.statusText})`);

@@ -11,8 +11,8 @@ const CHECKPOINT_FILE_EXT = '.dat';
 const CHECKPOINT_FILE_ENCODING = 'utf8';
 const UPDATED_ON_MS_PROP_NAME = 'updatedOnMs';
 
-function getCheckpoint(entityType) {
-  const checkpointFilePath = getCheckpointFilePath(entityType);
+function loadCheckpoint(entityTypeName) {
+  const checkpointFilePath = getCheckpointFilePath(entityTypeName);
   try {
     const data = fs.readFileSync(checkpointFilePath, CHECKPOINT_FILE_ENCODING);
     return Number.parseInt(data, 10);
@@ -22,7 +22,7 @@ function getCheckpoint(entityType) {
   }
 }
 
-function updateCheckpoint(entityType, entities) {
+function saveCheckpoint(entityTypeName, entities) {
   if (!Array.isArray(entities) || (entities.length === 0)) {
     log.debug(`Cannot update checkpoint for ${type} type as no entities were found.`);
     return;
@@ -36,12 +36,12 @@ function updateCheckpoint(entityType, entities) {
     return;
   }
 
-  const checkpointFilePath = getCheckpointFilePath(entityType);
+  const checkpointFilePath = getCheckpointFilePath(entityTypeName);
   fs.writeFileSync(checkpointFilePath, checkpoint, CHECKPOINT_FILE_ENCODING);
 }
 
-function getCheckpointFilePath(entityType) {
-  return path.join(CHECKPOINTS_DIR, entityType + CHECKPOINT_FILE_EXT);
+function getCheckpointFilePath(entityTypeName) {
+  return path.join(CHECKPOINTS_DIR, entityTypeName + CHECKPOINT_FILE_EXT);
 }
 
-module.exports = {getCheckpoint, updateCheckpoint};
+module.exports = {loadCheckpoint, saveCheckpoint};
