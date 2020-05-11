@@ -2,17 +2,15 @@
  * Copyright (C) 2020 Splunk, Inc. All rights reserved.
  */
 
-const log = require('loglevel');
-
+const {setupLogger, log} = require('./logger');
 const {sendHttpRequest} = require('./http');
-const {loadCheckpoint, saveCheckpoint} = require('./checkpoints');
 const {loadSnapshot, saveSnapshot, isNewOrUpdatedEntity} = require('./snapshots');
 const {loadTemplates, renderTemplate, COMBINED_OUTPUT_TEMPLATE} = require('./templates');
 
 const config = require('./config.json');
 
 async function main() {
-  log.setLevel(config.logLevel);
+  setupLogger(config.logLevel);
   try {
     const templates = loadTemplates();
     const entityTypes = await getEntityTypes();
@@ -23,22 +21,27 @@ async function main() {
         log.warn(`No template file for ${typeName} entities. All skipped.`);
         continue;
       }
-      const checkpoint = loadCheckpoint(typeName);
-      const snapshot = loadSnapshot(typeName, entityType.uniqueIdField);
-
-      const entities = await fetchEntities(typeName, checkpoint);
-      const newOrUpdatedEntities = entities.filter(e => isNewOrUpdatedEntity(snapshot, e));
-      log.debug(`Fetched ${entities.length} ${typeName} entities of which ${newOrUpdatedEntities.length} is new or updated.`);
-
-      const transformedEntities = transform(newOrUpdatedEntities, templates.get(typeName));
-      await send(transformedEntities, typeName, templates.get(COMBINED_OUTPUT_TEMPLATE));
-
-      saveSnapshot(snapshot, typeName, newOrUpdatedEntities);
-      saveCheckpoint(typeName, entities);
+      await handleEntityType(entityType, typeName, templates);
     }
   } catch (e) {
     log.error('Fatal error.', e);
   }
+}
+
+async function handleEntityType(entityType, typeName, templates) {
+  let entitiesResponse;
+  do {
+    const snapshot = loadSnapshot(typeName, entityType.uniqueIdField);
+
+    entitiesResponse = await fetchEntities(typeName, snapshot.checkpoint);
+    const newOrUpdatedEntities = entitiesResponse.items.filter(e => isNewOrUpdatedEntity(snapshot, e));
+    log.info(`Fetched ${entitiesResponse.items.length} ${typeName} entities of which ${newOrUpdatedEntities.length} is new or updated.`);
+
+    const transformedEntities = transform(newOrUpdatedEntities, templates.get(typeName));
+    await send(transformedEntities, typeName, templates.get(COMBINED_OUTPUT_TEMPLATE));
+
+    saveSnapshot(snapshot, typeName, newOrUpdatedEntities, entitiesResponse);
+  } while (entitiesResponse.partialResults);
 }
 
 async function getEntityTypes() {
@@ -54,7 +57,7 @@ async function fetchEntityTypes() {
 }
 
 async function fetchEntities(type, checkpoint) {
-  const updatedFromMs = Number.isInteger(checkpoint) ? checkpoint - config.sfx.checkpointOverlapInSeconds * 1000 : 1;
+  const updatedFromMs = Number.isInteger(checkpoint) ? checkpoint : 1;
   const pathAndQuery = renderTemplate(config.sfx.entitiesEndpoint, {type, updatedFromMs});
 
   const res = await sendHttpRequest({server: config.sfx.server, path: pathAndQuery, headers: config.sfx.headers});

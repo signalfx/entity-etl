@@ -3,9 +3,8 @@
  */
 
 const fetch = require('node-fetch');
-const log = require('loglevel');
 const url = require('url');
-
+const {log} = require('./logger');
 const {renderTemplate} = require('./templates');
 
 async function sendHttpRequest(options) {

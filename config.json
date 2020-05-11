@@ -6,8 +6,7 @@
       "X-SF-TOKEN": "{{env.SIGNALFX_AUTH_TOKEN}}"
     },
     "entitiesTypesEndpoint": "/v2/entities/types",
-    "entitiesEndpoint": "/v2/entities?type={{type}}&updatedFromMs={{updatedFromMs}}",
-    "checkpointOverlapInSeconds": 600
+    "entitiesEndpoint": "/v2/entities?type={{type}}&updatedFromMs={{updatedFromMs}}"
   },
   "output": {
     "method": "PUT",
