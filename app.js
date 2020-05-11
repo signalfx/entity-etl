@@ -21,20 +21,22 @@ async function main() {
         log.warn(`No template file for ${typeName} entities. All skipped.`);
         continue;
       }
-      await handleEntityType(entityType, typeName, templates);
+      await handleEntityType(entityType, templates);
     }
   } catch (e) {
     log.error('Fatal error.', e);
   }
 }
 
-async function handleEntityType(entityType, typeName, templates) {
+async function handleEntityType(entityType, templates) {
+  const typeName = entityType.name;
   let entitiesResponse;
   do {
     const snapshot = loadSnapshot(typeName, entityType.uniqueIdField);
 
     entitiesResponse = await fetchEntities(typeName, snapshot.checkpoint);
     const newOrUpdatedEntities = entitiesResponse.items.filter(e => isNewOrUpdatedEntity(snapshot, e));
+
     log.info(`Fetched ${entitiesResponse.items.length} ${typeName} entities of which ${newOrUpdatedEntities.length} is new or updated.`);
 
     const transformedEntities = transform(newOrUpdatedEntities, templates.get(typeName));
@@ -68,20 +70,30 @@ function transform(entities, templateFn) {
   return entities.map(entity => templateFn({entity}))
 }
 
-async function send(transformedEntities, type, combinedOutputTemplateFn) {
-  if (transformedEntities.length === 0) {
+async function send(entities, type, combinedOutputTemplateFn) {
+  if (entities.length === 0) {
     return;
   }
   const pathAndQuery = renderTemplate(config.output.entitiesEndpoint, {type});
   const {method, headers} = config.output;
-  const res = await sendHttpRequest({
-    method,
-    server: config.output.server,
-    path: pathAndQuery,
-    body: combinedOutputTemplateFn({entities: transformedEntities}),
-    headers
-  });
-  log.debug(`Transformed entities sent successfully (${res.status} ${res.statusText})`);
+
+  const maxBatchSize = config.output.maxBatchSize;
+  const batchCount = Math.ceil(entities.length / maxBatchSize);
+  log.info(`Got ${entities.length} entity(ies) in ${batchCount} batch(es) to send`);
+
+  for (let batchIndex = 0; batchIndex < batchCount; batchIndex++) {
+    log.debug(`Sending batch ${batchIndex + 1} out of ${batchCount}`);
+    const entityBaseIndex =  batchIndex * maxBatchSize;
+    const res = await sendHttpRequest({
+      method,
+      server: config.output.server,
+      path: pathAndQuery,
+      body: combinedOutputTemplateFn({entities: entities.slice(entityBaseIndex, entityBaseIndex + maxBatchSize)}),
+      headers
+    });
+    await res.text(); // wait for the request to be fully processed
+    log.debug(`Batch sent successfully (${res.status} ${res.statusText})`);
+  }
 }
 
 main().then(() => log.debug('All done.'));

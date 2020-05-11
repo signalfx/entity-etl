@@ -15,7 +15,8 @@
       "Authentication": "Bearer {{env.MY_SECRET_TOKEN}}",
       "Content-Type": "application/json"
     },
-    "entitiesEndpoint": "/sample/{{type}}?jwt={{env.MY_SECRET_TOKEN}}"
+    "entitiesEndpoint": "/sample/{{type}}?jwt={{env.MY_SECRET_TOKEN}}",
+    "maxBatchSize": 10000
   },
   "entitiesSnapshotTtlInHours": 1
 }
