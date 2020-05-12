@@ -1,5 +1,5 @@
 {
-  "logLevel": "debug",
+  "logLevel": "info",
   "sfx": {
     "server": "http://localhost:8080/",
     "headers": {
@@ -16,6 +16,8 @@
       "Authentication": "Bearer {{env.MY_SECRET_TOKEN}}",
       "Content-Type": "application/json"
     },
-    "entitiesEndpoint": "/sample/{{type}}?jwt={{env.JWT_TOKEN}}"
-  }
+    "entitiesEndpoint": "/sample/{{type}}?foo={{env.BAR}}",
+    "maxBatchSize": 10000
+  },
+  "entitiesSnapshotTtlInHours": 1
 }
