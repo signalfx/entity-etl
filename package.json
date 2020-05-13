@@ -5,7 +5,17 @@
   "main": "app.js",
   "dependencies": {
     "handlebars": "4.7.6",
+    "lodash.isequal": "4.5.0",
+    "lodash.omit": "4.5.0",
     "loglevel": "1.6.8",
     "node-fetch": "2.6.0"
+  },
+  "devDependencies": {
+    "chai": "4.2.0",
+    "mocha": "7.1.2"
+  },
+  "scripts": {
+    "test": "mocha",
+    "test-watch": "mocha --watch"
   }
 }
