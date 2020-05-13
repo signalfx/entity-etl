@@ -1,0 +1,7 @@
+{
+"cmdb_ci": "{{entity.aws_arn}}",
+"asset": "{{entity.AWSUniqueId}}",
+"install_date": "{{entity.aws_create_time}}",
+"name": "{{#with entity.aws_tag_Name}}{{.}}{{else}}{{entity.AWSUniqueId}}{{/with}}",
+"type": "ELB"
+}
