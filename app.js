@@ -2,15 +2,17 @@
  * Copyright (C) 2020 Splunk, Inc. All rights reserved.
  */
 
+const path = require('path');
 const {setupLogger, log} = require('./logger');
 const {sendHttpRequest} = require('./http');
-const {loadSnapshot, saveSnapshot, isNewOrUpdatedEntity} = require('./snapshots');
+const {loadCache, saveCache, updateCache, isNewOrUpdatedEntity} = require('./cache');
 const {loadTemplates, renderTemplate, COMBINED_OUTPUT_TEMPLATE} = require('./templates');
 
 const config = require('./config.json');
 
 async function main() {
   setupLogger(config.logLevel);
+  showUsageIfNeeded();
   try {
     const templates = loadTemplates();
     const entityTypes = await getEntityTypes();
@@ -28,29 +30,43 @@ async function main() {
   }
 }
 
+
 async function handleEntityType(entityType, templates) {
   const typeName = entityType.name;
+  const cache = loadCache(typeName, entityType.uniqueIdField);
   let entitiesResponse;
   do {
-    const snapshot = loadSnapshot(typeName, entityType.uniqueIdField);
-
-    entitiesResponse = await fetchEntities(typeName, snapshot.checkpoint);
-    const newOrUpdatedEntities = entitiesResponse.items.filter(e => isNewOrUpdatedEntity(snapshot, e));
+    entitiesResponse = await fetchEntities(typeName, cache.checkpoint);
+    const newOrUpdatedEntities = entitiesResponse.items.filter(e => isNewOrUpdatedEntity(cache, e));
 
     log.info(`Fetched ${entitiesResponse.items.length} ${typeName} entities of which ${newOrUpdatedEntities.length} is new or updated.`);
 
     const transformedEntities = transform(newOrUpdatedEntities, templates.get(typeName));
     await send(transformedEntities, typeName, templates.get(COMBINED_OUTPUT_TEMPLATE));
 
-    saveSnapshot(snapshot, typeName, newOrUpdatedEntities, entitiesResponse);
+    updateCache(cache, typeName, newOrUpdatedEntities, entitiesResponse);
+    saveCache(cache, typeName);
   } while (entitiesResponse.partialResults);
+}
+
+function showUsageIfNeeded() {
+  const scriptArgs = process.argv.slice(2);
+  if (scriptArgs.some(arg => arg.includes('-h'))) {
+    const scriptName = path.basename(process.argv[1]);
+    console.log(`Usage: ${scriptName} [entityType1] [...entityTypeN]`);
+    console.log(`To process all entity types do not specify any args: ${scriptName}`);
+    console.log(`To process selected types only provide a space delimited list: ${scriptName} awsEc2 gce azureVm`);
+    process.exit(0);
+  }
 }
 
 async function getEntityTypes() {
   const scriptArgs = process.argv.slice(2);
   const predicate = scriptArgs.length === 0 ? () => true : et => scriptArgs.includes(et.name);
-  const entityTypes = await fetchEntityTypes();
-  return entityTypes.filter(predicate);
+  const allTypes = await fetchEntityTypes();
+  const requestedTypes = allTypes.filter(predicate);
+  log.info('Fetching the following entity types:', requestedTypes.map(t => t.name).join(', '));
+  return requestedTypes;
 }
 
 async function fetchEntityTypes() {
