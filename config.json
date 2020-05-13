@@ -1,13 +1,12 @@
 {
-  "logLevel": "debug",
+  "logLevel": "info",
   "sfx": {
-    "server": "http://localhost:8080/",
+    "server": "https://api.{realm}.signalfx.com",
     "headers": {
-      "X-SF-TOKEN": "{{env.SIGNALFX_AUTH_TOKEN}}"
+      "X-SF-TOKEN": "{{env.SIGNALFX_ACCESS_TOKEN}}"
     },
     "entitiesTypesEndpoint": "/v2/entities/types",
-    "entitiesEndpoint": "/v2/entities?type={{type}}&updatedFromMs={{updatedFromMs}}",
-    "checkpointOverlapInSeconds": 600
+    "entitiesEndpoint": "/v2/entities?type={{type}}&updatedFromMs={{updatedFromMs}}"
   },
   "output": {
     "method": "PUT",
@@ -16,6 +15,8 @@
       "Authentication": "Bearer {{env.MY_SECRET_TOKEN}}",
       "Content-Type": "application/json"
     },
-    "entitiesEndpoint": "/sample/{{type}}?jwt={{env.JWT_TOKEN}}"
-  }
+    "entitiesEndpoint": "/sample/{{type}}?foo={{env.BAR}}",
+    "maxBatchSize": 10000
+  },
+  "entitiesCacheTtlInHours": 1
 }

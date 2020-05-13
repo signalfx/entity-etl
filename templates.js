@@ -3,9 +3,9 @@
  */
 
 const fs = require('fs');
-const log = require('loglevel');
 const path = require('path');
 const handlebars = require('handlebars');
+const {log} = require('./logger');
 
 const TEMPLATES_DIR = 'templates';
 const TEMPLATE_FILE_ENCODING = 'utf8';
