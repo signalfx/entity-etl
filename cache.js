@@ -43,12 +43,7 @@ function saveCache(cache, entityTypeName) {
 
 function updateCache(cache, entityTypeName, newOrUpdatedEntities, entitiesResponse) {
   addOrUpdateEntities(cache, newOrUpdatedEntities);
-  const now = Date.now();
-  for (let [entityId, cacheItem] of cache.map.entries()) {
-    if (cacheItem.ttl < now) {
-      cache.map.delete(entityId);
-    }
-  }
+  removeExpiredEntries(cache);
   cache.checkpoint = getCheckpoint(entityTypeName, entitiesResponse, cache.checkpoint);
 }
 
@@ -60,6 +55,15 @@ function addOrUpdateEntities(cache, newOrUpdatedEntities) {
       const entityId = getEntityId(cache, entity);
       cache.map.set(entityId, {ttl, entity});
     });
+}
+
+function removeExpiredEntries(cache) {
+  const now = Date.now();
+  for (let [entityId, cacheItem] of cache.map.entries()) {
+    if (cacheItem.ttl < now) {
+      cache.map.delete(entityId);
+    }
+  }
 }
 
 function isNewOrUpdatedEntity(cache, entity) {

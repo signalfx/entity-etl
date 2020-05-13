@@ -30,6 +30,16 @@ async function main() {
   }
 }
 
+function showUsageIfNeeded() {
+  const scriptArgs = process.argv.slice(2);
+  if (scriptArgs.some(arg => arg.includes('-h'))) {
+    const scriptName = path.basename(process.argv[1]);
+    console.log(`Usage: ${scriptName} [entityType1] [...entityTypeN]`);
+    console.log(`To process all entity types do not specify any args: ${scriptName}`);
+    console.log(`To process selected types only provide a space delimited list: ${scriptName} awsEc2 gce azureVm`);
+    process.exit(0);
+  }
+}
 
 async function handleEntityType(entityType, templates) {
   const typeName = entityType.name;
@@ -47,17 +57,6 @@ async function handleEntityType(entityType, templates) {
     updateCache(cache, typeName, newOrUpdatedEntities, entitiesResponse);
     saveCache(cache, typeName);
   } while (entitiesResponse.partialResults);
-}
-
-function showUsageIfNeeded() {
-  const scriptArgs = process.argv.slice(2);
-  if (scriptArgs.some(arg => arg.includes('-h'))) {
-    const scriptName = path.basename(process.argv[1]);
-    console.log(`Usage: ${scriptName} [entityType1] [...entityTypeN]`);
-    console.log(`To process all entity types do not specify any args: ${scriptName}`);
-    console.log(`To process selected types only provide a space delimited list: ${scriptName} awsEc2 gce azureVm`);
-    process.exit(0);
-  }
 }
 
 async function getEntityTypes() {
