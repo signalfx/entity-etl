@@ -82,6 +82,15 @@ Here's a sample configuration file.
 }
 ```
 
+## Cron
+
+You can use tools like `cron` if you want to run the script e.g. every 15 minutes.
+
+1. Use `crontab -e` command to edit your crontab file.
+2. Enter the following line to run the script every 15 minutes:
+
+   `*/15 * * * * cd /path/to/the/entity-etl/script && /usr/local/bin/node app > /tmp/entity-etl.log`
+
 ## Cache
 
 Entity ETL script stores entities fetched from SignalFx in cache files in the `data/cache` folder. Each entity type uses separate file to store cached values. Those files are maintained by the script. If you want to fetch all entities from SignalFx so that they are all pushed down to the target system feel free to remove all files in the cache folder (just make sure to keep the folder in place).
