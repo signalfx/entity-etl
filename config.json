@@ -8,7 +8,7 @@
     "entitiesTypesEndpoint": "/v2/entities/types",
     "entitiesEndpoint": "/v2/entities?type={{type}}&updatedFromMs={{updatedFromMs}}"
   },
-  "output": {
+  "target": {
     "method": "PUT",
     "server": "http://localhost:9090/",
     "headers": {
@@ -18,5 +18,5 @@
     "entitiesEndpoint": "/sample/{{type}}?foo={{env.BAR}}",
     "maxBatchSize": 10000
   },
-  "entitiesCacheTtlInHours": 1
+  "entitiesCacheTtlInHours": 8
 }

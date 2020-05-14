@@ -10,7 +10,7 @@ const {log} = require('./logger');
 const TEMPLATES_DIR = 'templates';
 const TEMPLATE_FILE_ENCODING = 'utf8';
 
-const COMBINED_OUTPUT_TEMPLATE = 'output';
+const TARGET_BODY_TEMPLATE = 'targetBody';
 
 function loadTemplates() {
   try {
@@ -39,4 +39,4 @@ function renderTemplate(templateText, context) {
   return template(contextWithEnv);
 }
 
-module.exports = {COMBINED_OUTPUT_TEMPLATE, loadTemplates, renderTemplate};
+module.exports = {TARGET_BODY_TEMPLATE, loadTemplates, renderTemplate};

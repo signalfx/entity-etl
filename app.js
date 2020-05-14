@@ -6,7 +6,7 @@ const path = require('path');
 const {setupLogger, log} = require('./logger');
 const {sendHttpRequest} = require('./http');
 const {loadCache, saveCache, updateCache, isNewOrUpdatedEntity} = require('./cache');
-const {loadTemplates, renderTemplate, COMBINED_OUTPUT_TEMPLATE} = require('./templates');
+const {loadTemplates, renderTemplate, TARGET_BODY_TEMPLATE} = require('./templates');
 
 const config = require('./config.json');
 
@@ -52,7 +52,7 @@ async function handleEntityType(entityType, templates) {
     log.info(`Fetched ${entitiesResponse.items.length} ${typeName} entities of which ${newOrUpdatedEntities.length} is new or updated.`);
 
     const transformedEntities = transform(newOrUpdatedEntities, templates.get(typeName));
-    await send(transformedEntities, typeName, templates.get(COMBINED_OUTPUT_TEMPLATE));
+    await send(transformedEntities, typeName, templates.get(TARGET_BODY_TEMPLATE));
 
     updateCache(cache, typeName, newOrUpdatedEntities, entitiesResponse);
     saveCache(cache, typeName);
@@ -85,14 +85,14 @@ function transform(entities, templateFn) {
   return entities.map(entity => templateFn({entity}))
 }
 
-async function send(entities, type, combinedOutputTemplateFn) {
+async function send(entities, type, combinedTargetTemplateFn) {
   if (entities.length === 0) {
     return;
   }
-  const pathAndQuery = renderTemplate(config.output.entitiesEndpoint, {type});
-  const {method, headers} = config.output;
+  const pathAndQuery = renderTemplate(config.target.entitiesEndpoint, {type});
+  const {method, headers} = config.target;
 
-  const maxBatchSize = config.output.maxBatchSize;
+  const maxBatchSize = config.target.maxBatchSize;
   const batchCount = Math.ceil(entities.length / maxBatchSize);
   log.info(`Got ${entities.length} entity(ies) in ${batchCount} batch(es) to send`);
 
@@ -101,9 +101,9 @@ async function send(entities, type, combinedOutputTemplateFn) {
     const entityBaseIndex =  batchIndex * maxBatchSize;
     const res = await sendHttpRequest({
       method,
-      server: config.output.server,
+      server: config.target.server,
       path: pathAndQuery,
-      body: combinedOutputTemplateFn({entities: entities.slice(entityBaseIndex, entityBaseIndex + maxBatchSize)}),
+      body: combinedTargetTemplateFn({entities: entities.slice(entityBaseIndex, entityBaseIndex + maxBatchSize)}),
       headers
     });
     await res.text(); // wait for the request to be fully processed

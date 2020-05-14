@@ -6,7 +6,7 @@ const fs = require('fs');
 const {describe, it, before} = require('mocha');
 const {expect} = require('chai');
 const {log} = require('../logger');
-const {COMBINED_OUTPUT_TEMPLATE, loadTemplates, renderTemplate} = require('../templates');
+const {TARGET_BODY_TEMPLATE, loadTemplates, renderTemplate} = require('../templates');
 
 describe('templates', () => {
 
@@ -18,7 +18,7 @@ describe('templates', () => {
     const templates = loadTemplates();
     expect(templates).to.be.ok;
     expect(templates.size).to.equal(6);
-    expect(templates).to.have.keys([COMBINED_OUTPUT_TEMPLATE, 'awsEc2', 'awsRds', 'awsElb', 'azureVm', 'gce']);
+    expect(templates).to.have.keys([TARGET_BODY_TEMPLATE, 'awsEc2', 'awsRds', 'awsElb', 'azureVm', 'gce']);
   });
 
   it('shall render pre-loaded template', () => {
