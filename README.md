@@ -140,16 +140,136 @@ To see what fields are available for a given entity type inspect the `/v2/entiti
 
 ## Entity API
 
-To see the list of supported entity types issue the following request:
+### Usage
 
+To see the list of supported entity types issue the following request:
 `curl -H "X-SF-TOKEN: $SIGNALFX_ACCESS_TOKEN" https://api.us1.signalfx.com/v2/entities/types`
 
 To see what fields are available for a given entity type inspect the response to the following request:
+`curl -H "X-SF-TOKEN: $SIGNALFX_ACCESS_TOKEN" https://api.us1.signalfx.com/v2/entities?type=awsRds`
 
-`curl -H "X-SF-TOKEN: $SIGNALFX_ACCESS_TOKEN" https://api.us1.signalfx.com/v2/entities?type=awsRds&updatedFromMs=1`
+The request returns entities which were updated in last 15 minutes. 
+If the response is empty, you may want to specify broader time range using query parameters listed below.
+
+Supported query parameters:
+* `type` - required. Examples: awsEC2, azureVm. Complete list of currently supported types is returned by `/entities/types` endpoint.
+* `updatedToMs` - optional. Default: current epoch time in milliseconds.
+* `updatedFromMs` - optional. Default: current epoch time in milliseconds minus 15 minutes.
 
 Note 1: We use the `curl` tool in the above examples. Feel free to use any other HTTP client.
 
 Note 2: You may need to escape (i.e. `\&`) the ampersand character depending on the shell you use.
 
 Note 3: The above examples assume your SignalFx API server is `api.us1.signalfx.com`. The actual value may be different - refer to your [profile page](https://docs.signalfx.com/en/latest/getting-started/get-around-ui.html#profile) in SignalFx to check the API server address.
+
+### HTTP Responses and Troubleshooting
+* 200 HTTP OK
+
+Returns the list of entities of requested type and the information if the results are partial. 
+In the latter case, the client should repeat the request and specify a narrower time range (the Entity ETL script implements this behavior).
+
+Sample response structure:
+```json
+{
+  "items": [
+    {
+      "AWSUniqueId": "i-0123456789abcdefg_us-west-2_123456789123",
+      "aws_account_id": "123456789123",
+       "aws_architecture": "x86_64",
+       "aws_arn": "arn:aws:ec2:us-west-2:123456789123:instance/i-0123456789abcdefg",
+       "aws_availability_zone": "us-west-2c",
+       "aws_hypervisor": "xen",
+       "aws_image_id": "ami-087c2c50437d0b80d",
+       "aws_instance_id": "i-0123456789abcdefg",
+       "aws_instance_type": "t3a.medium",
+       "aws_launch_time": "Tue Feb 18 18:14:10 UTC 2020",
+       "aws_private_dns_name": "ip-111–11-1-11.us-west-2.compute.internal",
+       "aws_region": "us-west-2",
+       "aws_reservation_id": "r-123456789abcdefg",
+       "aws_root_device_type": "ebs",
+       "aws_state": "{Code: 80,Name: stopped}",
+       "aws_state_reason": "{Code: Client.UserInitiatedShutdown,Message: Client.UserInitiatedShutdown: User initiated shutdown}",
+       "aws_tag_Name": "sample-test",
+       "updatedOnMs": 1582304819692
+     },
+     {
+       "AWSUniqueId": "i-0123456789abcdefh_us-east-2_123456789123",
+       "aws_account_id": "123456789123",
+       "aws_architecture": "x86_64",
+       "aws_arn": "arn:aws:ec2:us-east-2:123456789123:instance/i-0123456789abcdefh",
+       "aws_availability_zone": "us-east-2b",
+       "aws_hypervisor": "xen",
+       "aws_image_id": "ami-0307f7ccf6ea35750",
+       "aws_instance_id": "i-123456789abcdefh",
+       "aws_instance_type": "c4.large",
+       "aws_launch_time": "Fri Mar 22 16:18:01 UTC 2019",
+       "aws_private_dns_name": "ip-10-0-100-100.us-east-2.compute.internal",
+       "aws_region": "us-east-2",
+       "aws_reservation_id": "r-0123456789abcdefh",
+       "aws_root_device_type": "ebs",
+       "aws_state": "{Code: 16,Name: running}",
+       "aws_tag_Name": "Sample ECS host",
+       "aws_tag_aws_autoscaling_groupName": "Sample-ecs-host-ECSAutoScalingGroup-ABCDEFGHIJKLM",
+       "aws_tag_aws_cloudformation_logical-id": "ECSAutoScalingGroup",
+       "aws_tag_aws_cloudformation_stack-id": "arn:aws:cloudformation:us-east-2:123456789123:stack/Sample-ecs-host/abcdefgh-1234-5678-9012-a1b2c3d4e5f6",
+       "aws_tag_aws_cloudformation_stack-name": "Sample-ecs-host",
+       "updatedOnMs": 1582320323006
+     }
+    ],
+   "partialResults": false
+ }
+
+```
+* 400 HTTP Bad request
+
+The most likely reason is an unsupported value of a `type` query parameter.
+
+Sample response:
+```json
+{
+  "code": 400,
+  "message": "{\"error\": \"Invalid value of the query param 'type'\""
+}
+```
+
+* 401 HTTP Unauthorized
+
+The token that has been used to issue the request is invalid. Please note [the difference between User API Token and Access Token](https://docs.signalfx.com/en/latest/admin-guide/tokens.html#tokens-overview).
+Valid organization-level access token should be used for the execution of the sample script.
+Make sure that the script is pointing to the correct [SignalFx realm](https://developers.signalfx.com/#realms-in-endpoints).
+
+Sample response: 
+
+```html
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+  <title>Error 401 Unauthorized</title>
+</head>
+<body><h2>HTTP ERROR 401 Unauthorized</h2>
+<table>
+  ...
+</table>
+
+</body>
+</html>
+```
+
+* 403 HTTP Forbidden
+
+The entity API is enabled by SignalFx per customer's request. 
+The following message means that the API is not enabled in the current organization. 
+
+```json
+{
+  "error": "The requested endpoint is not enabled in your organization."
+}
+```
+
+Please contact SignalFx support for enablement of the feature in the selected organization.
+
+### Limitations
+* Please note that the entities data may be available with a delay which is dependent on current load on SignalFx system.
+Entity ETL script implementation accounts for the delay.
+* Depending on the source of the data, the updates of the metadata may be extracted by SignalFx with a delay. 
+For example, for sources based on cloud providers' APIs, the usual pull interval is 15 minutes. 
