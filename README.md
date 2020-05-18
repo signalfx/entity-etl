@@ -49,22 +49,23 @@ Prerequisites:
 
 3. Run the script in the Docker container:
 
-   `docker run -e SIGNALFX_ACCESS_TOKEN=$TOKEN entity-etl`
+   `docker run -v $PWD/data/cache:/app/data/cache -e SIGNALFX_ACCESS_TOKEN=$TOKEN entity-etl`
 
    The above example assumes you have updated the `config.json` file before building the Docker image. If you want to provide an updated `config.json` after the image is built you can use the following command:
 
-   `docker run -v $PWD/config.json:/app/config.json -e SIGNALFX_ACCESS_TOKEN=$TOKEN entity-etl`
+   ```
+   docker run -v $PWD/data/cache:/app/data/cache -v $PWD/config.json:/app/config.json \
+   -e SIGNALFX_ACCESS_TOKEN=$TOKEN entity-etl
+   ```
 
    You can also specify a list of entity types to process:
 
-   `docker run -v $PWD/config.json:/app/config.json -e SIGNALFX_ACCESS_TOKEN=$TOKEN entity-etl node app awsEc2 gce`
-
-   Finally to ensure the [cached entities](#cache) are not lost when container finishes its work you may mount a volume to keep cache outside of the Docker container:
-
    ```
-   docker run -v $PWD/config.json:/app/config.json -v $PWD/data/cache:/app/data/cache \
-   -e SIGNALFX_ACCESS_TOKEN=$TOKEN entity-etl
+   docker run -v $PWD/data/cache:/app/data/cache -v $PWD/config.json:/app/config.json \
+   -e SIGNALFX_ACCESS_TOKEN=$TOKEN entity-etl node app awsEc2 gce
    ```
+   
+   Note: the Entity ETL script uses local filesystem to store [cache](#cache) data. To ensure this data is not lost between Docker container runs it is recommended to mount a volume as shown above (i.e. `-v $PWD/data/cache:/app/data/cache`) to persist the cache outside of the Docker container.
 
 ## Configuration Parameters
 
