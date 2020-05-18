@@ -1,7 +1,7 @@
 {
   "logLevel": "info",
   "sfx": {
-    "server": "https://api.{realm}.signalfx.com",
+    "server": "https://api.us1.signalfx.com",
     "headers": {
       "X-SF-TOKEN": "{{env.SIGNALFX_ACCESS_TOKEN}}"
     },

@@ -1,34 +1,61 @@
 # SignalFx Entity ETL
 
-The SignalFx Entity ETL is a Node.js script used to:
- * extract entities like VMs, databases, load balancers, etc. from SignalFx
- * transform them into a format suitable for a target system
- * load transformed entities to the target system using HTTP requests
+The SignalFx Entity ETL is a Node.js script which performs the following configurable steps:
+ * extracts entities like VMs, databases, load balancers, etc. from SignalFx that were added or updated since the last run
+ * transforms them into a format suitable for a target system
+ * loads transformed entities to the target system using HTTP requests
+
+It is recommended to schedule the script to run in intervals. See [cron](#cron) for details.
 
 ## Quick Start
 
-Make sure to update [config file](config.json) to reflect the target system you want to use. See [Configuration Parameters](#configuration-parameters) below for details.
+Make sure to update the [config file](config.json) to match the requirements of the target system you want to use. See [Configuration Parameters](#configuration-parameters) below for details.
 
-### Using Local Node.js Installation
+You can run the script either using Node.js installation on your system or using Docker container.
 
-1. `node app` -- processes all entity types
-2. `node app awsEc2 gce` -- processes specified types only (`awsEc2` and `gce` in this case)
+### Option 1: Using local Node.js installation
 
-### Using Docker
+Prerequisites:
 
-1. Build your own Docker image first:
+  * [Node.js](https://nodejs.org) 12.14.x or later installed.
+
+  * Network connectivity to the Node Package Manager (npm) to install script's dependencies (one-time operation).
+
+  * Network connectivity to SignalFx and the target system.
+
+1. Install script's dependencies first.
+
+   `npm install`
+
+2. Run the script using one of the following modes:
+   * `node app` -- processes all entity types
+   * `node app awsEc2 gce` -- processes specified types only (`awsEc2` and `gce` in this case)
+
+### Option 2: Using Docker
+
+Prerequisites:
+
+  * [Docker](https://docs.docker.com/get-docker/) 19.x+ installed.
+
+  * Network connectivity to Docker Hub to build Docker image with the Entity ETL script.
+
+  * Network connectivity to SignalFx and the target system.
+
+1. Update [config file](config.json) - this is optional; you can provide the updated `config.json` file later too.
+
+2. Build your own Docker image:
 
    `docker build -t entity-etl .`
 
-2. Run the script in the Docker container:
+3. Run the script in the Docker container:
 
    `docker run -e SIGNALFX_ACCESS_TOKEN=$TOKEN entity-etl`
 
-   The above example assumes you have updated the `config.json` file before building the Docker image. If you want to provide an udpated `config.json` after the image is built you can use the following command:
+   The above example assumes you have updated the `config.json` file before building the Docker image. If you want to provide an updated `config.json` after the image is built you can use the following command:
 
    `docker run -v $PWD/config.json:/app/config.json -e SIGNALFX_ACCESS_TOKEN=$TOKEN entity-etl`
 
-   You can also specify a list of types to process:
+   You can also specify a list of entity types to process:
 
    `docker run -v $PWD/config.json:/app/config.json -e SIGNALFX_ACCESS_TOKEN=$TOKEN entity-etl node app awsEc2 gce`
 
@@ -91,6 +118,8 @@ You can use tools like `cron` if you want to run the script e.g. every 15 minute
 
    `*/15 * * * * cd /path/to/the/entity-etl/script && /usr/local/bin/node app > /tmp/entity-etl.log`
 
+Due to [API limitations](#api-limitations) we recommend the script interval of 15 minutes.
+
 ## Cache
 
 Entity ETL script stores entities fetched from SignalFx in cache files in the `data/cache` folder. Each entity type uses separate file to store cached values. Those files are maintained by the script. If you want to fetch all entities from SignalFx so that they are all pushed down to the target system feel free to remove all files in the cache folder (just make sure to keep the folder in place).
@@ -99,20 +128,28 @@ See `entitiesCacheTtlInHours` parameter description in the [Configuration Parame
 
 ## Templates
 
+The Entity ETL script uses [Handlebars](https://handlebarsjs.com/) templating language.
+
 The `templates` folder contains several template files used to convert entities to a format supported by the target system. Each file is used to convert entities of a single type, e.g. `awsEc2.hbs` file is used to convert `awsEc2` entities.
 
 The `targetBody.hbs` is a special template used to combine one or more converted entities into a single HTTP request body sent to the target system.
 
-Feel free to adapt the provided templates. To see what fields are available for a given entity type inspect the `/v2/entities` endpoint response. See [Entity API](#entity-api) section for details.
+The provided templates are suitable for ServiceNow CMDB table API. Feel free to adapt them to your requirements.
+
+To see what fields are available for a given entity type inspect the `/v2/entities` endpoint response. See [Entity API](#entity-api) section for details.
 
 ## Entity API
 
-To see a list of supported entity types issue the following request:
+To see the list of supported entity types issue the following request:
 
-`curl -H "X-SF-TOKEN: $SIGNALFX_ACCESS_TOKEN" http://localhost:8080/v2/entities/types`
+`curl -H "X-SF-TOKEN: $SIGNALFX_ACCESS_TOKEN" https://api.us1.signalfx.com/v2/entities/types`
 
-To see what fields are available for a given entity type inspect a response to the following request:
+To see what fields are available for a given entity type inspect the response to the following request:
 
-`curl -H "X-SF-TOKEN: $SIGNALFX_ACCESS_TOKEN" http://localhost:8080/v2/entities?type=awsRds&updatedFromMs=1`
+`curl -H "X-SF-TOKEN: $SIGNALFX_ACCESS_TOKEN" https://api.us1.signalfx.com/v2/entities?type=awsRds&updatedFromMs=1`
 
-Note: you may need to escape (i.e. `\&`) the ampersand character depending on the shell you use.
+Note 1: We use the `curl` tool in the above examples. Feel free to use any other HTTP client.
+
+Note 2: You may need to escape (i.e. `\&`) the ampersand character depending on the shell you use.
+
+Note 3: The above examples assume your SignalFx API server is `api.us1.signalfx.com`. The actual value may be different - refer to your [profile page](https://docs.signalfx.com/en/latest/getting-started/get-around-ui.html#profile) in SignalFx to check the API server address.
