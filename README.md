@@ -142,18 +142,19 @@ To see what fields are available for a given entity type inspect the `/v2/entiti
 
 ### Usage
 
-To see what fields are available for a given entity type inspect the response to the following request:
-
+To see the list of supported entity types issue the following request:
 `curl -H "X-SF-TOKEN: $SIGNALFX_ACCESS_TOKEN" https://api.us1.signalfx.com/v2/entities/types`
 
-To see a list of supported entity types issue the following request:
+To see what fields are available for a given entity type inspect the response to the following request:
+`curl -H "X-SF-TOKEN: $SIGNALFX_ACCESS_TOKEN" https://api.us1.signalfx.com/v2/entities?type=awsRds`
 
-`curl -H "X-SF-TOKEN: $SIGNALFX_ACCESS_TOKEN" https://api.us1.signalfx.com/v2/entities?type=awsRds&updatedFromMs=1589782151936&updatedToMs=1589792151936`
+The request returns entities which were updated in last 15 minutes. 
+If the response is empty, you may want to specify broader time range using query parameters listed below.
 
 Supported query parameters:
 * `type` - required. Examples: awsEC2, azureVm. Complete list of currently supported types is returned by `/entities/types` endpoint.
-* `updatedToMs` - optional. Default: current time in milliseconds.
-* `updatedFromMs` - optional. Default: current time in milliseconds minus 15 minutes.
+* `updatedToMs` - optional. Default: current epoch time in milliseconds.
+* `updatedFromMs` - optional. Default: current epoch time in milliseconds minus 15 minutes.
 
 Note 1: We use the `curl` tool in the above examples. Feel free to use any other HTTP client.
 
@@ -161,13 +162,13 @@ Note 2: You may need to escape (i.e. `\&`) the ampersand character depending on 
 
 Note 3: The above examples assume your SignalFx API server is `api.us1.signalfx.com`. The actual value may be different - refer to your [profile page](https://docs.signalfx.com/en/latest/getting-started/get-around-ui.html#profile) in SignalFx to check the API server address.
 
-### HTTP Responses and troubleshooting
+### HTTP Responses and Troubleshooting
 * 200 HTTP OK
 
 Returns the list of entities of requested type and the information if the results are partial. 
-In the latter case, the client should repeat the request and specify a narrower time range (sample etl implementation implements this behavior).
+In the latter case, the client should repeat the request and specify a narrower time range (the Entity ETL script implements this behavior).
 
-Sample response:
+Sample response structure:
 ```json
 {
   "items": [
@@ -175,6 +176,7 @@ Sample response:
       "AWSUniqueId": "i-0123456789abcdefg_us-west-2_123456789123",
       "aws_account_id": "123456789123",
        "aws_architecture": "x86_64",
+       "aws_arn": "arn:aws:ec2:us-west-2:123456789123:instance/i-0123456789abcdefg",
        "aws_availability_zone": "us-west-2c",
        "aws_hypervisor": "xen",
        "aws_image_id": "ami-087c2c50437d0b80d",
@@ -194,6 +196,7 @@ Sample response:
        "AWSUniqueId": "i-0123456789abcdefh_us-east-2_123456789123",
        "aws_account_id": "123456789123",
        "aws_architecture": "x86_64",
+       "aws_arn": "arn:aws:ec2:us-east-2:123456789123:instance/i-0123456789abcdefh",
        "aws_availability_zone": "us-east-2b",
        "aws_hypervisor": "xen",
        "aws_image_id": "ami-0307f7ccf6ea35750",
@@ -219,7 +222,7 @@ Sample response:
 ```
 * 400 HTTP Bad request
 
-The most likely reason is an unsupported value of a type query parameter.
+The most likely reason is an unsupported value of a `type` query parameter.
 
 Sample response:
 ```json
@@ -231,9 +234,9 @@ Sample response:
 
 * 401 HTTP Unauthorized
 
-The token that has been used to issue the request is invalid. Please note [the difference between User API Token and Access Token](https://github.com/bgola-signalfx/entity-etl).
+The token that has been used to issue the request is invalid. Please note [the difference between User API Token and Access Token](https://docs.signalfx.com/en/latest/admin-guide/tokens.html#tokens-overview).
 Valid organization-level access token should be used for the execution of the sample script.
-Make sure that the etl script is pointing to the correct [SignalFx realm](https://developers.signalfx.com/#realms-in-endpoints).
+Make sure that the script is pointing to the correct [SignalFx realm](https://developers.signalfx.com/#realms-in-endpoints).
 
 Sample response: 
 
@@ -254,7 +257,6 @@ Sample response:
 
 * 403 HTTP Forbidden
 
-
 The entity API is enabled by SignalFx per customer's request. 
 The following message means that the API is not enabled in the current organization. 
 
@@ -268,6 +270,6 @@ Please contact SignalFx support for enablement of the feature in the selected or
 
 ### Limitations
 * Please note that the entities data may be available with a delay which is dependent on current load on SignalFx system.
-The sample implementation accounts for the delay.
+Entity ETL script implementation accounts for the delay.
 * Depending on the source of the data, the updates of the metadata may be extracted by SignalFx with a delay. 
 For example, for sources based on cloud providers' APIs, the usual pull interval is 15 minutes. 
