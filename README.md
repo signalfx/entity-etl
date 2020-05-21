@@ -146,9 +146,11 @@ To see what fields are available for a given entity type inspect the `/v2/entiti
 ### Usage
 
 To see the list of supported entity types issue the following request:
+
 `curl -H "X-SF-TOKEN: $SIGNALFX_ACCESS_TOKEN" https://api.us1.signalfx.com/v2/entities/types`
 
 To see what fields are available for a given entity type inspect the response to the following request:
+
 `curl -H "X-SF-TOKEN: $SIGNALFX_ACCESS_TOKEN" https://api.us1.signalfx.com/v2/entities?type=awsRds`
 
 The request returns entities which were updated in last 15 minutes. 
