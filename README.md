@@ -83,6 +83,8 @@ Prerequisites:
 | `target.maxBatchSize` | Specifies max number of entities sent to the target system in a single HTTP request. | Positive integer. Maximum value is dictated by the target system limits. |
 | `entitiesCacheTtlInHours` | Entities fetched from SignalFx are cached so that the script can send only new or updated entities to the target system. This parameter specifies how long entities are kept in the cache. When entities are added, updated or retrieved from cache their TTL is updated. | Any positive integer. Recommended value: 8 hours. |
 
+All above parameters are required (though the `target.headers` list may be empty if the target system does not need them).
+
 Here's a sample configuration file.
 
 ```json
