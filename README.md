@@ -5,15 +5,32 @@ The SignalFx Entity ETL is a Node.js script which performs the following configu
  * transforms them into a format suitable for a target system
  * loads transformed entities to the target system using HTTP requests
 
-It is recommended to schedule the script to run in intervals. See [cron](#cron) for details.
+It is recommended to schedule the script to run in intervals. See below for details.
 
-## Quick Start
+## Setup Procedure
 
-Make sure to update the [config file](config.json) to match the requirements of the target system you want to use. See [Configuration Parameters](#configuration-parameters) below for details.
+### Step 1: Clone this repository
+
+```
+git clone git@github.com:signalfx/entity-etl.git
+cd entity-etl
+```
+
+### Step 2: Update configuration file
+
+Update the [config file](config.json) to match the requirements of the target system you want to use. See [Configuration Parameters](#configuration-parameters) below for details.
+
+### Step 3: Set your environment variables
+
+It is recommended to put SignalFx Access Token in the `SIGNALFX_ACCESS_TOKEN` environment variable. Refer to the [SignalFx documentation](https://docs.signalfx.com/en/latest/admin-guide/tokens.html#working-with-access-tokens) to check how to obtain the Access Token.
+
+If your target system requires some form of authentication you may also use environment variables in the same way.
+
+### Step 4: Run the script
 
 You can run the script either using Node.js installation on your system or using Docker container.
 
-### Option 1: Using local Node.js installation
+#### Step 4, Option 1: Use a local Node.js installation
 
 Prerequisites:
 
@@ -31,7 +48,7 @@ Prerequisites:
    * `node app` -- processes all entity types
    * `node app awsEc2 gce` -- processes specified types only (`awsEc2` and `gce` in this case)
 
-### Option 2: Using Docker
+#### Step 4, Option 2: Use Docker
 
 Prerequisites:
 
@@ -49,23 +66,46 @@ Prerequisites:
 
 3. Run the script in the Docker container:
 
-   `docker run -v $PWD/data/cache:/app/data/cache -e SIGNALFX_ACCESS_TOKEN=$TOKEN entity-etl`
+   `docker run -v $PWD/data/cache:/app/data/cache -e SIGNALFX_ACCESS_TOKEN=$SIGNALFX_ACCESS_TOKEN entity-etl`
 
    The above example assumes you have updated the `config.json` file before building the Docker image. If you want to provide an updated `config.json` after the image is built you can use the following command:
 
    ```
    docker run -v $PWD/data/cache:/app/data/cache -v $PWD/config.json:/app/config.json \
-   -e SIGNALFX_ACCESS_TOKEN=$TOKEN entity-etl
+   -e SIGNALFX_ACCESS_TOKEN=$SIGNALFX_ACCESS_TOKEN entity-etl
    ```
 
    You can also specify a list of entity types to process:
 
    ```
    docker run -v $PWD/data/cache:/app/data/cache -v $PWD/config.json:/app/config.json \
-   -e SIGNALFX_ACCESS_TOKEN=$TOKEN entity-etl node app awsEc2 gce
+   -e SIGNALFX_ACCESS_TOKEN=$SIGNALFX_ACCESS_TOKEN entity-etl node app awsEc2 gce
    ```
    
-   Note: the Entity ETL script uses local filesystem to store [cache](#cache) data. To ensure this data is not lost between Docker container runs it is recommended to mount a volume as shown above (i.e. `-v $PWD/data/cache:/app/data/cache`) to persist the cache outside of the Docker container.
+   Note: the Entity ETL script uses a local filesystem to store [cache](#cache) data. To ensure this data is not lost between Docker container runs it is recommended to mount a volume as shown above (i.e. `-v $PWD/data/cache:/app/data/cache`) to persist the cache outside of the Docker container.
+
+### Step 5: Make the Entity ETL script run on an interval
+
+You can use tools like `cron` if you want to run the script on an interval.
+
+Due to [API limitations](#api-limitations) we recommend the script interval of 15 minutes.
+
+#### Step 5, Option 1: Use a local cron installation
+
+1. Use `crontab -e` command to edit your crontab file.
+2. Enter the following line to run the script every 15 minutes:
+
+   `*/15 * * * * cd /path/to/the/entity-etl/script && /usr/local/bin/node app > /tmp/entity-etl.log`
+
+#### Step 5, Option 2: Use Docker
+
+1. Optionally: adjust the [crontab](crontab) file if you want to use an interval different from 15 minutes. Rebuild the Docker image in such a case.
+2. Use the following command to schedule the script execution:
+
+   ```
+   docker run -d -v $PWD/data/cache:/app/data/cache -v $PWD/config.json:/app/config.json \
+   -e SIGNALFX_ACCESS_TOKEN=$SIGNALFX_ACCESS_TOKEN entity-etl crond -f
+   ```
 
 ## Configuration Parameters
 
@@ -111,17 +151,6 @@ Here's a sample configuration file.
   "entitiesCacheTtlInHours": 1
 }
 ```
-
-## Cron
-
-You can use tools like `cron` if you want to run the script e.g. every 15 minutes.
-
-1. Use `crontab -e` command to edit your crontab file.
-2. Enter the following line to run the script every 15 minutes:
-
-   `*/15 * * * * cd /path/to/the/entity-etl/script && /usr/local/bin/node app > /tmp/entity-etl.log`
-
-Due to [API limitations](#api-limitations) we recommend the script interval of 15 minutes.
 
 ## Cache
 
