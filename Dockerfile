@@ -9,5 +9,6 @@ ADD package-lock.json .
 RUN npm install
 
 COPY . .
+COPY crontab /etc/crontabs/root
 
 CMD ["node", "app"]
