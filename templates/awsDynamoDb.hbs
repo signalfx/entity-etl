@@ -1,0 +1,9 @@
+{
+"cmdb_ci": "{{entity.aws_arn}}",
+"asset": "{{entity.AWSUniqueId}}",
+"name": "{{#with entity.aws_tag_Name}}{{.}}{{else}}{{entity.aws_instance_id}}{{/with}}",
+"operational_status": "{{entity.aws_table_status}}",
+"subcategory": "{{entity.aws_instance_type}}",
+"type": "DB"
+"vendor": "AWS/DynamoDB"
+}
