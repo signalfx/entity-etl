@@ -4,7 +4,7 @@
   "description": "Sample script used to fetch entities from SignalFx service, transform them and post to a REST endpoint.",
   "main": "app.js",
   "dependencies": {
-    "handlebars": "4.7.6",
+    "handlebars": "4.7.7",
     "lodash.isequal": "4.5.0",
     "lodash.omit": "4.5.0",
     "loglevel": "1.6.8",
